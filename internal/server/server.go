@@ -23,7 +23,13 @@ func FormHandler(w http.ResponseWriter, r *http.Request) {
 
 func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	opt := option.WithCredentialsFile("./serviceAccountKey.json")
+	serviceAccountKeyJSON := os.Getenv("FIREBASE_SERVICE_ACCOUNT_KEY")
+	if serviceAccountKeyJSON == "" {
+		http.Error(w, "FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set", http.StatusInternalServerError)
+		return
+	}
+
+	opt := option.WithCredentialsJSON([]byte(serviceAccountKeyJSON))
 
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
