@@ -17,7 +17,7 @@ func FormHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
-	tmpl := template.Must(template.ParseFiles("index.html"))
+	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 	tmpl.Execute(w, nil)
 }
 
@@ -45,7 +45,7 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error parsing form", http.StatusMethodNotAllowed)
 	}
 
-	tmpl := template.Must(template.ParseFiles("submit.html"))
+	tmpl := template.Must(template.ParseFiles("templates/submit.html"))
 	tmpl.Execute(w, nil)
 
 	subject := r.FormValue("subject")
