@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	firebase "firebase.google.com/go"
 	"github.com/go-mail/mail/v2"
@@ -72,19 +73,38 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendEmail(subject, message string, recipients []string) error {
-	m := mail.NewMessage()
-	m.SetHeader("From", os.Getenv("EMAIL_ADDRESS"))
-	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", message)
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(recipients))
 
-	d := mail.NewDialer("smtp.gmail.com", 465, os.Getenv("EMAIL_ADDRESS"), os.Getenv("EMAIL_PASSWORD"))
-	d.SSL = true
 	for _, recipient := range recipients {
-		m.SetHeader("To", recipient)
-		if err := d.DialAndSend(m); err != nil {
+		wg.Add(1)
+		go func(recipient string) {
+			defer wg.Done()
+
+			d := mail.NewDialer("smtp.gmail.com", 465, os.Getenv("EMAIL_ADDRESS"), os.Getenv("EMAIL_PASSWORD"))
+			d.SSL = true
+
+			m := mail.NewMessage()
+			m.SetHeader("From", os.Getenv("EMAIL_ADDRESS"))
+			m.SetHeader("To", recipient)
+			m.SetHeader("Subject", subject)
+			m.SetBody("text/plain", message)
+
+			if err := d.DialAndSend(m); err != nil {
+				errChan <- err
+				return
+			}
+			log.Printf("Message sent to: %v", recipient)
+		}(recipient)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
 			return err
 		}
-		log.Printf("Message sent to %s", recipient)
 	}
 	return nil
 }
